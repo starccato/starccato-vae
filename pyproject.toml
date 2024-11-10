@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]  # Tell setuptools to look in the "src" directory
+
+[project]
+name = "starccatovae"
+version = "0.0.1"
+requires-python = ">=3.8"
+description = "VAE implementation of Starccato"
+readme = "README.md"
+authors = [
+    {name = "Tarin Eccleston", email = "tarin.eccleston@gmail.com" },
+    {name = "Matthew Edwards", email = "matt.edwards@auckland.ac.nz"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.8",
+]
+dependencies = [
+    "scikit-learn>=1.3.2",
+    "torch>=2.0.1",
+    "torchsummary>=1.5.1",
+    "torchvision>=0.15.2",
+    "pandas",
+    "click",
+    "loguru",
+    "matplotlib",
+    "tqdm"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-click",
+    "pytest-cov>=4.1.0",
+    "coverage[toml]",
+    "pre-commit",
+    "flake8>=5.0.4",
+    "black==22.10.0",
+    "jupyter-book",
+]
