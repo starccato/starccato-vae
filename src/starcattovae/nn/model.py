@@ -5,13 +5,14 @@ from src.starcattovae.nn.encoder import Encoder
 from src.starcattovae.nn.decoder import Decoder
 
 class Model(nn.Module):
-    def __init__(self, Encoder, Decoder):
+    def __init__(self, Encoder, Decoder, DEVICE):
         super(Model, self).__init__()
         self.Encoder = Encoder
         self.Decoder = Decoder
+        self.DEVICE = DEVICE
         
     def reparameterization(self, mean, var):
-        epsilon = torch.randn_like(var).to(DEVICE)        # sampling epsilon        
+        epsilon = torch.randn_like(var).to(self.DEVICE)        # sampling epsilon        
         z = mean + var*epsilon                          # reparameterization trick
         return z
         
