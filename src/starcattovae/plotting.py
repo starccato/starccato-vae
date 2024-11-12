@@ -94,16 +94,9 @@ def plot_loss(
         fig = plt.figure(figsize=(10, 6))
         axes = fig.gca()
     axes.plot(losses, label="VAE Loss (ELBO)")
-    # axes.axhline( # there probably isn't a convergence point for VAE loss
-    #     y=0.5,
-    #     color="black",
-    #     linestyle="--",
-    #     alpha=0.5,
-    #     label="Discriminator Loss Convergence Point",
-    # )
     axes.set_xlabel("Batch", size=20)
     axes.set_ylabel("Loss", size=20)
-    axes.set_ylim(0, 100)
+    # axes.set_ylim(0, 100)
     axes.legend(fontsize=16)
     plt.tight_layout()
     if fname:
