@@ -50,6 +50,7 @@ def plot_waveform_grid(
     if fname:
         plt.savefig(fname, dpi=300, bbox_inches="tight")
 
+    plt.show()
     return fig, axes
 
 def plot_reconstruction(
@@ -69,7 +70,7 @@ def plot_reconstruction(
     
     # plot the reconstructed signal
     y_reconstructed = reconstructed.flatten() * max_value
-    ax.plot(x, y_reconstructed, color="red", label="Reconstructed Signal")
+    ax.plot(x, y_reconstructed, color="orange", label="Decoder Reconstructed Signal")
 
     ax.set_ylim(-600, 300)
     ax.axvline(x=0, color="black", linestyle="--", alpha=0.5)
@@ -83,6 +84,7 @@ def plot_reconstruction(
     if fname:
         plt.savefig(fname, dpi=300, bbox_inches="tight")
 
+    plt.show()
     return fig, ax
 
 def plot_loss(
@@ -98,8 +100,11 @@ def plot_loss(
     axes.set_ylabel("Loss", size=20)
     # axes.set_ylim(0, 100)
     axes.legend(fontsize=16)
+    
     plt.tight_layout()
+
     if fname:
         plt.savefig(fname)
+    
     return axes.get_figure()
 
