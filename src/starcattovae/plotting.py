@@ -10,12 +10,12 @@ SIGMA_QUANTS = [0.68, 0.96, 0.99]
 def plot_waveform_grid(
     signals: np.ndarray,
     max_value: float,
-    num_cols: int = 4,
-    num_rows: int = 2,
+    num_cols: int = 2,
+    num_rows: int = 4,
     fname: str = None,
 ) -> Tuple[plt.Figure, plt.Axes]:
     fig, axes = plt.subplots(
-        num_cols, num_rows, figsize=(num_cols * 4, num_rows * 3)
+        num_rows, num_cols, figsize=(10, 15)
     )
 
     axes = axes.flatten()
@@ -24,7 +24,7 @@ def plot_waveform_grid(
     for i, ax in enumerate(axes):
         x = [i / 4096 for i in range(0, 256)]
         x = [value - (53 / 4096) for value in x]
-        y = signals[i, :, :].flatten()
+        y = signals[i].flatten()
         y = y * max_value
         ax.set_ylim(-600, 300)
         ax.plot(x, y, color="red")
@@ -37,11 +37,11 @@ def plot_waveform_grid(
             ax.yaxis.set_ticklabels([])
 
         # remove x-axis tick labels for all but the bottom two plots
-        if i <= 11:
+        if i < num_cols * (num_rows - 1):
             ax.xaxis.set_ticklabels([])
 
-    for i in range(512, 8 * 4):
-        fig.delaxes(axes[i])
+    # for i in range(512, 8 * 4):
+    #     fig.delaxes(axes[i])
 
     fig.supxlabel('time (s)', fontsize=32)
     fig.supylabel('hD (cm)', fontsize=32)
