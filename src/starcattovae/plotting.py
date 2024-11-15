@@ -111,7 +111,7 @@ def plot_loss(
     
     return axes.get_figure()
 
-def plot_loss_with_validation(
+def plot_training_validation_loss(
     losses: List[float],
     val_losses: List[float],
     fname: str = None,
