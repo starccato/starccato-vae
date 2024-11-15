@@ -113,7 +113,7 @@ def plot_loss(
 
 def plot_training_validation_loss(
     losses: List[float],
-    val_losses: List[float],
+    validation_losses: List[float],
     fname: str = None,
     axes: plt.Axes = None,
 ):
@@ -122,7 +122,7 @@ def plot_training_validation_loss(
         axes = fig.gca()
 
     axes.plot(losses, label="Total Training Loss", color='orange')
-    axes.plot(val_losses, label="Total Validation Loss", color='grey')
+    axes.plot(validation_losses, label="Total Validation Loss", color='grey')
     axes.set_xlabel("Epoch", size=20)
     axes.set_ylabel("Loss", size=20)
     axes.legend(fontsize=16)
