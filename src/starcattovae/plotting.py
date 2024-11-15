@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+import src.starcattovae.nn.encoder as Encoder
+import src.starcattovae.nn.decoder as Decoder
+
 # 1, 2, 3, sigmas
 SIGMA_QUANTS = [0.68, 0.96, 0.99]
 
@@ -107,4 +110,64 @@ def plot_loss(
         plt.savefig(fname)
     
     return axes.get_figure()
+
+def plot_latent_morphs(
+    encoder: Encoder, 
+    decoder: Decoder, 
+    signal_1: torch.Tensor,
+    signal_2: torch.Tensor,
+    max_value: float, 
+    steps=10
+):
+    encoder.eval()
+    decoder.eval()
+
+    with torch.no_grad():
+        mean_1, _ = encoder(signal_1)
+        mean_2, _ = encoder(signal_2)
+
+        interpolated_latents = [mean_1 * (1 - alpha) + mean_2 * alpha for alpha in np.linspace(0, 1, steps)]
+        morphed_signals = [decoder(latent).cpu().detach().numpy() for latent in interpolated_latents]
+
+    num_plots = steps + 2
+    fig, axes = plt.subplots(num_plots, 1, figsize=(10, 2 * num_plots))
+    axes = axes.flatten()
+
+    # X-axis values (shared across all plots)
+    x_vals = [i / 4096 for i in range(0, 256)]
+    x_vals = [value - (53 / 4096) for value in x_vals]
+
+    # Plot signal_1 (blue)
+    y1 = signal_1.cpu().detach().numpy().flatten() * max_value
+    axes[0].plot(x_vals, y1, color="blue")
+    axes[0].set_ylim(-600, 300)
+    axes[0].axvline(x=0, color="black", linestyle="--", alpha=0.5)
+    axes[0].grid(True)
+    axes[0].set_title("Original Signal 1 (Start)")
+
+    # Plot the interpolated signals (red)
+    for i, signal in enumerate(morphed_signals):
+        y_interp = signal.flatten() * max_value
+        # y_interp = signal.flatten()
+        axes[i + 1].plot(x_vals, y_interp, color="red")
+        axes[i + 1].set_ylim(-600, 300)
+        axes[i + 1].axvline(x=0, color="black", linestyle="--", alpha=0.5)
+        axes[i + 1].grid(True)
+        axes[i + 1].set_title(f"Interpolated Signal {i + 1}")
+
+    # Plot signal_2 (blue)
+    y2 = signal_2.cpu().detach().numpy().flatten() * max_value
+    axes[-1].plot(x_vals, y2, color="blue")
+    axes[-1].set_ylim(-600, 300)
+    axes[-1].axvline(x=0, color="black", linestyle="--", alpha=0.5)
+    axes[-1].grid(True)
+    axes[-1].set_title("Original Signal 2 (End)")
+
+    # Keep all tick labels
+    fig.supxlabel('time (s)', fontsize=16)
+    fig.supylabel('hD (cm)', fontsize=16)
+
+    plt.tight_layout()
+    plt.show()
+
 
