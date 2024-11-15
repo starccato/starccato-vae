@@ -98,10 +98,33 @@ def plot_loss(
     if axes is None:
         fig = plt.figure(figsize=(10, 6))
         axes = fig.gca()
-    axes.plot(losses, label="VAE Loss (ELBO)")
-    axes.set_xlabel("Batch", size=20)
+    axes.plot(losses, label="Total Training Loss)")
+    axes.set_xlabel("Epoch", size=20)
     axes.set_ylabel("Loss", size=20)
     # axes.set_ylim(0, 100)
+    axes.legend(fontsize=16)
+    
+    plt.tight_layout()
+
+    if fname:
+        plt.savefig(fname)
+    
+    return axes.get_figure()
+
+def plot_loss_with_validation(
+    losses: List[float],
+    val_losses: List[float],
+    fname: str = None,
+    axes: plt.Axes = None,
+):
+    if axes is None:
+        fig = plt.figure(figsize=(10, 6))
+        axes = fig.gca()
+
+    axes.plot(losses, label="Total Training Loss", color='orange')
+    axes.plot(val_losses, label="Total Validation Loss", color='grey')
+    axes.set_xlabel("Epoch", size=20)
+    axes.set_ylabel("Loss", size=20)
     axes.legend(fontsize=16)
     
     plt.tight_layout()
