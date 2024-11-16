@@ -192,5 +192,3 @@ def plot_latent_morphs(
 
     plt.tight_layout()
     plt.show()
-
-
