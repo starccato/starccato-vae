@@ -11,10 +11,10 @@ from torch.utils.data import DataLoader, Dataset
 from ..logger import logger
 BATCH_SIZE = 32
 
-_ROOT_URL = "https://raw.githubusercontent.com/starccato/data/main/training"
-SIGNALS_CSV = f"{_ROOT_URL}/richers_1764.csv"
-PARAMETERS_CSV = f"{_ROOT_URL}/richers_1764_parameters.csv"
-TIME_CSV = f"{_ROOT_URL}/richers_1764_times.csv"
+# _ROOT_URL = "https://raw.githubusercontent.com/starccato/data/main/training"
+SIGNALS_CSV = f"../data/training/richers_1764.csv"
+PARAMETERS_CSV = f"../data/training/richers_1764_parameters.csv"
+TIME_CSV = f"../data/training/richers_1764_times.csv"
 
 
 class Data(Dataset):
