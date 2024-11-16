@@ -20,5 +20,4 @@ def config_logger(level="INFO"):
     logger.configure(handlers=[{"sink": sys.stdout, "level": level}])
     return logger
 
-
 logger = config_logger()

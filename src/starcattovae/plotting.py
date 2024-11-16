@@ -1,7 +1,10 @@
 from typing import List, Optional, Tuple
 
 import matplotlib.pyplot as plt
+
 import numpy as np
+import pandas as pd
+
 import torch
 
 import src.starcattovae.nn.encoder as Encoder
@@ -191,4 +194,46 @@ def plot_latent_morphs(
     fig.supylabel('hD (cm)', fontsize=16)
 
     plt.tight_layout()
+    plt.show()
+
+def plot_signal_distribution(
+    signals: np.ndarray, # (x_length, num_signals)
+    generated: bool = True,
+    fname: str = None,
+):
+    if generated == True:
+        distribution_color = 'red'
+    else:
+        distribution_color = 'blue'
+    
+    num_signals = signals.shape[0]
+    signal_length = signals.shape[1]
+
+    signals_df = pd.DataFrame(signals)
+
+    median_line = signals_df.median(axis=1)
+
+    # Transform x values
+    x = [i / 4096 for i in range(0, 256)]
+    x = [value - (53 / 4096) for value in x]
+
+    percentile_2_5 = signals_df.quantile(0.025, axis=1)
+    percentile_97_5 = signals_df.quantile(0.975, axis=1)
+    plt.fill_between(x, percentile_2_5, percentile_97_5, color=distribution_color, alpha=0.25, label='Central 95%')
+
+    percentile_25 = signals_df.quantile(0.25, axis=1)
+    percentile_75 = signals_df.quantile(0.75, axis=1)
+    plt.fill_between(x, percentile_25, percentile_75, color=distribution_color, alpha=0.5, label='Central 50%')
+
+    plt.plot(x, median_line.values, color='k', linestyle='-', linewidth=1, alpha=1.0, label='Median of signals')
+    plt.axvline(x=0, color='black', linestyle='--', alpha=0.5)  
+    plt.ylim(-600, 300)
+    plt.xlabel('time (s)', size=20)
+    plt.ylabel('hD (cm)', size=20)
+    plt.grid(True)
+    plt.legend()
+
+    if fname:
+        plt.savefig(fname, dpi=300, bbox_inches="tight")
+
     plt.show()
