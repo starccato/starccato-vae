@@ -13,7 +13,5 @@ class Decoder(nn.Module):
     def forward(self, x):
         h     = self.LeakyReLU(self.FC_hidden(x))
         h     = self.LeakyReLU(self.FC_hidden2(h))
-        
-        # x_hat = torch.sigmoid(self.FC_output(h)) 
-        x_hat = self.FC_output(h) # we want any value between -inf and inf, remove sigmoid
+        x_hat = self.FC_output(h)
         return x_hat

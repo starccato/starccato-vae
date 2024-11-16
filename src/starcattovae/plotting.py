@@ -114,6 +114,30 @@ def plot_loss(
     
     return axes.get_figure()
 
+def plot_individual_loss(
+    total_losses: List[float],
+    reconstruction_losses: List[float],
+    kld_losses: List[float],
+    fname: str = None,
+): 
+    if axes is None:
+        fig = plt.figure(figsize=(10, 6))
+        axes = fig.gca()
+
+    axes.plot(total_losses, label="Total Training Loss", color='orange')
+    axes.plot(reconstruction_losses, label="Total Validation Loss", color='yellow')
+    axes.plot(kld_losses, label="Total Validation Loss", color='red')
+    axes.set_xlabel("Epoch", size=20)
+    axes.set_ylabel("Loss", size=20)
+    axes.legend(fontsize=16)
+    
+    plt.tight_layout()
+
+    if fname:
+        plt.savefig(fname)
+    
+    return axes.get_figure()
+
 def plot_training_validation_loss(
     losses: List[float],
     validation_losses: List[float],
