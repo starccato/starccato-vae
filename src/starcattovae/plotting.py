@@ -120,9 +120,8 @@ def plot_individual_loss(
     kld_losses: List[float],
     fname: str = None,
 ): 
-    if axes is None:
-        fig = plt.figure(figsize=(10, 6))
-        axes = fig.gca()
+    fig = plt.figure(figsize=(10, 6))
+    axes = fig.gca()
 
     axes.plot(total_losses, label="Total Training Loss", color='orange')
     axes.plot(reconstruction_losses, label="Total Validation Loss", color='yellow')
