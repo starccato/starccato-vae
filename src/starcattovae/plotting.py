@@ -7,8 +7,7 @@ import pandas as pd
 
 import torch
 
-import src.starcattovae.nn.encoder as Encoder
-import src.starcattovae.nn.decoder as Decoder
+import src.starcattovae.nn.vae as VAE
 
 # 1, 2, 3, sigmas
 SIGMA_QUANTS = [0.68, 0.96, 0.99]
@@ -161,22 +160,20 @@ def plot_training_validation_loss(
     return axes.get_figure()
 
 def plot_latent_morphs(
-    encoder: Encoder, 
-    decoder: Decoder, 
+    model: VAE, 
     signal_1: torch.Tensor,
     signal_2: torch.Tensor,
     max_value: float, 
     steps=10
 ):
-    encoder.eval()
-    decoder.eval()
+    model.eval()
 
     with torch.no_grad():
-        mean_1, _ = encoder(signal_1)
-        mean_2, _ = encoder(signal_2)
+        mean_1, _ = model.encoder(signal_1)
+        mean_2, _ = model.encoder(signal_2)
 
         interpolated_latents = [mean_1 * (1 - alpha) + mean_2 * alpha for alpha in np.linspace(0, 1, steps)]
-        morphed_signals = [decoder(latent).cpu().detach().numpy() for latent in interpolated_latents]
+        morphed_signals = [model.decoder(latent).cpu().detach().numpy() for latent in interpolated_latents]
 
     num_plots = steps + 2
     fig, axes = plt.subplots(num_plots, 1, figsize=(10, 2 * num_plots))
