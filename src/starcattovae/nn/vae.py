@@ -4,9 +4,9 @@ from torch import nn
 from src.starcattovae.nn.encoder import Encoder
 from src.starcattovae.nn.decoder import Decoder
 
-class Model(nn.Module):
+class VAE(nn.Module):
     def __init__(self, Encoder, Decoder, DEVICE):
-        super(Model, self).__init__()
+        super(VAE, self).__init__()
         self.Encoder = Encoder
         self.Decoder = Decoder
         self.DEVICE = DEVICE
