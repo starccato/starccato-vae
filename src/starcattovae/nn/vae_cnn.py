@@ -55,21 +55,38 @@ class Encoder(nn.Module):
         self.fc_log_var = nn.Linear(128 * self.feature_map_length, latent_dim)
 
     def forward(self, x):
-        h_ = self.main(x)
-        mean = self.fc_mean(h_)
-        log_var = self.fc_log_var(h_)
+        h = self.main(x)
+        mean = self.fc_mean(h)
+        log_var = self.fc_log_var(h)
         return mean, log_var
 
 class Decoder(nn.Module):
-    def __init__(self, latent_dim, hidden_dim, output_dim):
+    def __init__(self, latent_dim, output_length):
         super(Decoder, self).__init__()
-        self.FC_hidden = nn.Linear(latent_dim, hidden_dim)
-        self.FC_hidden2 = nn.Linear(hidden_dim, hidden_dim)
-        self.FC_output = nn.Linear(hidden_dim, output_dim)
-        self.LeakyReLU = nn.LeakyReLU(0.2)
+        """
+        CNN Decoder for 1D signal reconstruction.
         
-    def forward(self, x):
-        h = self.LeakyReLU(self.FC_hidden(x))
-        h = self.LeakyReLU(self.FC_hidden2(h))
-        x_hat = self.FC_output(h)
+        Args:
+            latent_dim (int): Size of the latent space.
+            output_length (int): Length of the output signal.
+        """
+        self.fc = nn.Sequential(
+            nn.Linear(latent_dim, 128 * output_length // (2 ** 3)),
+            nn.LeakyReLU(0.2)
+        )
+
+        self.main = nn.Sequential(
+            nn.ConvTranspose1d(128, 64, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm1d(64),
+            nn.LeakyReLU(0.2),
+            nn.ConvTranspose1d(64, 32, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm1d(32),
+            nn.LeakyReLU(0.2),
+            nn.ConvTranspose1d(32, 1, kernel_size=4, stride=2, padding=1),
+        )
+
+    def forward(self, z):
+        h = self.fc(z)
+        h = h.view(h.size(0), 128, -1)  # Reshape to [batch_size, 128, feature_length]
+        x_hat = self.main(h)
         return x_hat
