@@ -9,8 +9,11 @@ import torch
 
 import src.starcattovae.nn.vae as VAE
 
-# 1, 2, 3, sigmas
-SIGMA_QUANTS = [0.68, 0.96, 0.99]
+plt.rcParams.update({
+    'font.size': 12,
+    'font.family': 'serif',
+    'font.serif': ['Times New Roman']
+})
 
 def plot_waveform_grid(
     signals: np.ndarray,
