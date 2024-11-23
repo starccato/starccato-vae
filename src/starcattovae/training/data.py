@@ -118,7 +118,7 @@ class Data(Dataset):
     def __getitem__(self, idx):
         signal = self.signals[:, idx]
         signal = signal.reshape(1, -1)
-        parameters = self.parameters[idx, :]
+        parameters = self.parameters.iloc[idx]
 
         normalised_signal = self.normalise(signal)
 
