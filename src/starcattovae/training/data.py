@@ -42,9 +42,9 @@ class Data(Dataset):
         # remove unusual parameters
         keep_idx = self.parameters["beta1_IC_b"] > 0
         self.parameters = self.parameters[keep_idx]
+        self.parameters = self.parameters["beta1_IC_b"]
         self.signals = self.signals[keep_idx]
         self.signals = self.signals.values.T
-        self.augmented_signals = np.empty(shape=(256, 0)).astype("float32")
 
         ### flatten signals and take last 256 timestamps
         temp_data = np.empty(shape=(256, 0)).astype("float32")
@@ -118,10 +118,11 @@ class Data(Dataset):
     def __getitem__(self, idx):
         signal = self.signals[:, idx]
         signal = signal.reshape(1, -1)
+        parameters = self.parameters[idx, :]
 
         normalised_signal = self.normalise(signal)
 
-        return normalised_signal
+        return normalised_signal, parameters
 
     def get_loader(self) -> DataLoader:
         return DataLoader(
