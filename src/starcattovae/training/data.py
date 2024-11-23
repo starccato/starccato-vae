@@ -75,6 +75,7 @@ class Data(Dataset):
         self.std = np.std(self.signals, axis=None)
         self.scaling_factor = 5
         self.max_value = abs(self.signals).max()
+        self.max_parameter_value = abs(self.parameters).max()
         self.ylim_signal = (self.signals[:, :].min(), self.signals[:, :].max())
 
     def __str__(self):
@@ -92,6 +93,7 @@ class Data(Dataset):
         str = f"Signal Dataset mean: {self.mean:.3f} +/- {self.std:.3f}\n"
         str += f"Signal Dataset scaling factor (to match noise in generator): {self.scaling_factor}\n"
         str += f"Signal Dataset max value: {self.max_value}\n"
+        str += f"Signal Dataset max parameter value: {self.max_parameter_value}\n"
         str += f"Signal Dataset shape: {self.signals.shape}\n"
         logger.info(str)
 
@@ -103,6 +105,10 @@ class Data(Dataset):
     def normalise(self, signal):
         normalised_signal = signal / self.max_value
         return normalised_signal
+    
+    def normalise_parameters(self, parameters):
+        normalised_parameters = parameters / self.max_parameter_value
+        return normalised_parameters
 
     ### overloads ###
     def __len__(self):
@@ -121,8 +127,9 @@ class Data(Dataset):
         parameters = self.parameters.iloc[idx]
 
         normalised_signal = self.normalise(signal)
+        normalised_parameters = self.normalise_parameters(parameters)
 
-        return normalised_signal, parameters
+        return normalised_signal, normalised_parameters
 
     def get_loader(self) -> DataLoader:
         return DataLoader(
@@ -131,49 +138,3 @@ class Data(Dataset):
 
     def get_signals_iterator(self):
         return next(iter(self.get_loader()))
-
-    def plot_waveforms(
-        self, fname=None, normalised=False
-    ) -> Tuple[plt.Figure, plt.Axes]:
-        fig, axes = plt.subplots(1, 3, figsize=(15, 4))
-        axes = axes.flatten()
-        signal_iterator = self.get_signals_iterator()
-
-        # Plot each signal on a separate subplot
-        for i, ax in enumerate(axes):
-            x = np.arange(signal_iterator.size(dim=2))
-            y = signal_iterator[i, :, :].flatten()
-
-            if normalised:
-                # y = y * self.scaling_factor
-                # y = y * self.std + self.mean
-                y = y * self.max_value
-
-            ax.plot(x, y, color="blue")
-
-            ax.axvline(x=53, color="black", linestyle="--", alpha=0.5)
-            ax.grid(True)
-            ax.set_ylim((-4, 2))
-            if normalised:
-                ax.set_ylim(self.ylim_signal)
-
-            # Add axis titles
-            ax.set_ylabel("distance * strain (cm)")
-            ax.set_xlabel("n (timestamps)")
-            ax.set_xlim(min(x), max(x))
-
-            # parameters = signal_iterator[i, :].numpy()[0]
-            # parameters_with_names = f'{parameter_names[0]}: {parameters[0]:.6f}\n{parameter_names[1]}: {parameters[1]:.2f}, {parameter_names[2]}: {parameters[2]:.2f}'
-            # ax.set_xlabel(f'Parameters:\n{parameters_with_names}')
-
-        fig.suptitle("Waveforms")
-        if normalised:
-            fig.suptitle("Normalised Waveforms")
-
-        for i in range(407, 8 * 4):
-            fig.delaxes(axes[i])
-
-        plt.tight_layout()
-        if fname is not None:
-            plt.savefig(fname)
-        return fig, axes
