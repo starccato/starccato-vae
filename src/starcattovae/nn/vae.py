@@ -27,8 +27,8 @@ class Decoder(nn.Module):
         self.FC_output = nn.Linear(hidden_dim, output_dim)
         self.LeakyReLU = nn.LeakyReLU(0.2)
         
-    def forward(self, x):
-        h = self.LeakyReLU(self.FC_hidden(x))
+    def forward(self, z):
+        h = self.LeakyReLU(self.FC_hidden(z))
         h = self.LeakyReLU(self.FC_hidden2(h))
         x_hat = self.FC_output(h)
         return x_hat

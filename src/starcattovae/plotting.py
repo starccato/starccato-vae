@@ -1,6 +1,8 @@
 from typing import List, Optional, Tuple
 
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from mpl_toolkits.mplot3d import Axes3D
 
 import numpy as np
 import pandas as pd
@@ -219,6 +221,93 @@ def plot_latent_morphs(
     plt.tight_layout()
     plt.show()
 
+def animate_latent_morphs(
+    model,  # Assuming model is a VAE instance
+    signal_1: torch.Tensor,
+    signal_2: torch.Tensor,
+    max_value: float, 
+    train_dataset,
+    steps=10,
+    interval=200,
+    save_path=None
+):
+    model.eval()
+
+    with torch.no_grad():
+        mean_1, _ = model.encoder(signal_1)
+        mean_2, _ = model.encoder(signal_2)
+
+        # Forward and backward interpolation
+        forward_interpolated = [mean_1 * (1 - alpha) + mean_2 * alpha for alpha in np.linspace(0, 1, steps)]
+        backward_interpolated = [mean_2 * (1 - alpha) + mean_1 * alpha for alpha in np.linspace(0, 1, steps)]
+        interpolated_latents = forward_interpolated + backward_interpolated
+        morphed_signals = [model.decoder(latent).cpu().detach().numpy() for latent in interpolated_latents]
+
+        # Compute the posterior distribution
+        all_means = []
+        for x, y in train_dataset:
+            x = torch.tensor(x).to(model.DEVICE)
+            mean, _ = model.encoder(x)
+            all_means.append(mean.cpu().numpy())
+        all_means = np.concatenate(all_means, axis=0)
+
+    fig = plt.figure(figsize=(10, 17))  # Adjust the figure size for vertical stacking
+
+    # Create 3D plot for latent space
+    ax_latent = fig.add_subplot(211, projection='3d')  # First plot (top) in vertical layout
+    ax_latent.scatter(all_means[:, 0], all_means[:, 1], all_means[:, 2], color='gray', alpha=0.2, label='Posterior Distribution')
+    ax_latent.scatter(mean_1[0].cpu().numpy(), mean_1[1].cpu().numpy(), mean_1[2].cpu().numpy(), color='blue', s=50, label='Signal 1')
+    ax_latent.scatter(mean_2[0].cpu().numpy(), mean_2[1].cpu().numpy(), mean_2[2].cpu().numpy(), color='green', s=50, label='Signal 2')
+    ax_latent.plot([mean_1[0].cpu().numpy(), mean_2[0].cpu().numpy()],
+                   [mean_1[1].cpu().numpy(), mean_2[1].cpu().numpy()],
+                   [mean_1[2].cpu().numpy(), mean_2[2].cpu().numpy()], color='red', linestyle='--', label='Interpolation Path', linewidth=2)
+    moving_point, = ax_latent.plot([], [], [], 'ro', markersize=7, label='Interpolated Point')
+    # ax_latent.set_title('Latent Space Interpolation')
+    ax_latent.set_xlabel('Latent Dim 1')
+    ax_latent.set_ylabel('Latent Dim 2')
+    ax_latent.set_zlabel('Latent Dim 3')
+    # ax_latent.legend()
+
+    # Create plot for signal morphing
+    ax_signal = fig.add_subplot(212)  # Second plot (bottom) in vertical layout
+
+    # X-axis values (shared across all plots)
+    x_vals = [i / 4096 for i in range(0, 256)]
+    x_vals = [value - (53 / 4096) for value in x_vals]
+
+    # Initialize the plot
+    line, = ax_signal.plot([], [], color="red")
+    ax_signal.set_xlim(min(x_vals), max(x_vals))
+    ax_signal.set_ylim(-600, 300)
+    ax_signal.axvline(x=0, color="black", linestyle="--", alpha=0.5)
+    ax_signal.grid(True)
+    ax_signal.set_xlabel('time (s)', fontsize=16)
+    ax_signal.set_ylabel('hD (cm)', fontsize=16)
+
+    def init():
+        line.set_data([], [])
+        moving_point.set_data([], [])
+        moving_point.set_3d_properties([])
+        return line, moving_point
+
+    def update(frame):
+        y_interp = morphed_signals[frame].flatten() * max_value
+        line.set_data(x_vals, y_interp)
+        # ax_signal.set_title(f"Interpolated Signal {frame + 1}")
+
+        # Update the moving point in the latent space
+        latent_point = interpolated_latents[frame].cpu().numpy()
+        moving_point.set_data(latent_point[0], latent_point[1])
+        moving_point.set_3d_properties(latent_point[2])
+        return line, moving_point
+
+    ani = animation.FuncAnimation(fig, update, frames=len(interpolated_latents), init_func=init, blit=True, interval=interval, repeat=True)
+
+    if save_path:
+        ani.save(save_path, writer='imagemagick', fps=30)
+
+    plt.show()
+
 def plot_signal_distribution(
     signals: np.ndarray, # (x_length, num_signals)
     generated: bool = True,
@@ -259,4 +348,34 @@ def plot_signal_distribution(
     if fname:
         plt.savefig(fname, dpi=300, bbox_inches="tight")
 
+    plt.show()
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+def plot_single_signal(
+    signal: np.ndarray,
+    max_value: float,
+    fname: str = None,  # Added missing comma
+):
+    # Generate x-axis values
+    x = [i / 4096 for i in range(0, 256)]
+    x = [value - (53 / 4096) for value in x]
+
+    # Process signal for plotting
+    y = signal.flatten()
+    y = y * max_value
+
+    # Plot
+    plt.figure(figsize=(8, 6))
+    plt.plot(x, y, color='blue')
+    plt.axvline(x=0, color='black', linestyle='--', alpha=0.5)
+    plt.ylim(-600, 300)
+    plt.xlabel('time (s)', size=20)
+    plt.ylabel('hD (cm)', size=20)
+    plt.grid(True)
+
+    # Save or show the plot
+    if fname:
+        plt.savefig(fname, dpi=300, bbox_inches="tight")
     plt.show()

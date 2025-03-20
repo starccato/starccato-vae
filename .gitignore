@@ -1,6 +1,10 @@
 # DS store
 **/.DS_Store
 
+# .gifs
+/gifs
+*.gif
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

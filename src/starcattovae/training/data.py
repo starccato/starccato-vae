@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from torch.utils.data import DataLoader, Dataset
+import torch
 
 # from ..defaults import BATCH_SIZE
 from ..logger import logger
@@ -39,10 +40,16 @@ class Data(Dataset):
                 f"Frac of TrainingData being used {init_shape} -> {self.signals.shape}"
             )
 
-        # remove unusual parameters
+        # remove unusual parameters and corresponding signalss
         keep_idx = self.parameters["beta1_IC_b"] > 0
         self.parameters = self.parameters[keep_idx]
         self.parameters = self.parameters["beta1_IC_b"]
+
+        # equal freq bin the parameters
+        self.parameters = pd.qcut(self.parameters, 10, labels=False)
+        # one-hot encode the parameters
+        # self.parameters = pd.get_dummies(self.parameters).astype("int32")
+
         self.signals = self.signals[keep_idx]
         self.signals = self.signals.values.T
 
@@ -102,7 +109,7 @@ class Data(Dataset):
         standardized_signal = standardized_signal / self.scaling_factor
         return standardized_signal
 
-    def normalise(self, signal):
+    def normalise_signals(self, signal):
         normalised_signal = signal / self.max_value
         return normalised_signal
     
@@ -125,11 +132,13 @@ class Data(Dataset):
         signal = self.signals[:, idx]
         signal = signal.reshape(1, -1)
         parameters = self.parameters.iloc[idx]
+        parameters = parameters.reshape(1, -1)
 
-        normalised_signal = self.normalise(signal)
-        normalised_parameters = self.normalise_parameters(parameters)
+        normalised_signal = self.normalise_signals(signal)
+        # normalised_parameters = self.normalise_parameters(parameters)
 
-        return normalised_signal, normalised_parameters
+        # return normalised_signal, parameters
+        return torch.tensor(signal, dtype=torch.float32), torch.tensor(parameters, dtype=torch.float32)
 
     def get_loader(self) -> DataLoader:
         return DataLoader(
