@@ -46,7 +46,7 @@ class Data(Dataset):
         self.parameters = self.parameters["beta1_IC_b"]
 
         # equal freq bin the parameters
-        self.parameters = pd.qcut(self.parameters, 10, labels=False)
+        # self.parameters = pd.qcut(self.parameters, 10, labels=False)
         # one-hot encode the parameters
         # self.parameters = pd.get_dummies(self.parameters).astype("int32")
 
