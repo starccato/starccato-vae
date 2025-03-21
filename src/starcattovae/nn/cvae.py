@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torch.distributions import Categorical, MultivariateNormal, MixtureSameFamily
 
 # note:
 # y = signal - our observation
@@ -30,13 +31,13 @@ class CVAE(nn.Module):
         return z
     
     def forward(self, x, y):
+        # r1 network
         r1_mean, r1_log_var, r1_weights = self.r1(y)
         r1_zy_samp = 
 
         # output from q network
         q_zxy_mean, q_zxy_log_var = self.q(x, y)
         q_zxy_z_samp = self.q.sample_from_gaussian_distribution(self.batch_size, self.latent_dim, q_zxy_mean, q_zxy_log_var)
-
 
 
         z = self.reparameterization(mean, torch.exp(0.5 * log_var))  # takes exponential function (log var -> var)
@@ -98,6 +99,37 @@ class Encoder(nn.Module):
         weights = torch.softmax(self.FC_weights(h), dim=1)
 
         return means, log_vars, weights
+    
+    def define_and_sample_gmm(r1_weight, r1_loc, r1_scale):
+        """
+        Define the r1(z|y) mixture model and sample from it.
+
+        Args:
+            ramp: Scalar multiplier for the logits of the mixture weights.
+            r1_weight: Tensor of shape (batch_size, num_components), logits for the mixture weights.
+            r1_loc: Tensor of shape (batch_size, num_components, latent_dim), means of the Gaussian components.
+            r1_scale: Tensor of shape (batch_size, num_components, latent_dim), standard deviations of the Gaussian components.
+
+        Returns:
+            r1_zy_samp: Samples drawn from the r1(z|y) mixture model.
+        """
+
+        # Define the mixture distribution
+        mixture_distribution = Categorical(logits=r1_weight)
+
+        # Define the Gaussian components
+        components_distribution = MultivariateNormal(
+            loc=r1_loc,
+            scale_tril=torch.diag_embed(r1_scale)  # Convert scale_diag to scale_tril
+        )
+
+        # Define the MixtureSameFamily distribution
+        bimix_gauss = MixtureSameFamily(mixture_distribution, components_distribution)
+
+        # Sample from the mixture model
+        r1_zy_samp = bimix_gauss.sample()
+
+        return r1_zy_samp
 
 # conditioned parameters on signals
 class Q(nn.Module):
