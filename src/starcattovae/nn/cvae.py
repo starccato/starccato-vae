@@ -33,7 +33,7 @@ class CVAE(nn.Module):
     def forward(self, x, y):
         # r1 network
         r1_mean, r1_log_var, r1_weights = self.r1(y)
-        r1_zy_samp = 
+        r1_zy_z_samp = self.r1.define_and_sample_gmm(r1_weights, r1_mean, r1_log_var)
 
         # output from q network
         q_zxy_mean, q_zxy_log_var = self.q(x, y)
@@ -100,26 +100,27 @@ class Encoder(nn.Module):
 
         return means, log_vars, weights
     
-    def define_and_sample_gmm(r1_weight, r1_loc, r1_scale):
+    def define_and_sample_gmm(r1_weight, r1_mean, r1_log_var):
         """
         Define the r1(z|y) mixture model and sample from it.
 
         Args:
-            ramp: Scalar multiplier for the logits of the mixture weights.
             r1_weight: Tensor of shape (batch_size, num_components), logits for the mixture weights.
-            r1_loc: Tensor of shape (batch_size, num_components, latent_dim), means of the Gaussian components.
-            r1_scale: Tensor of shape (batch_size, num_components, latent_dim), standard deviations of the Gaussian components.
+            r1_mean: Tensor of shape (batch_size, num_components, latent_dim), means of the Gaussian components.
+            r1_log_var: Tensor of shape (batch_size, num_components, latent_dim), log variances of the Gaussian components.
 
         Returns:
             r1_zy_samp: Samples drawn from the r1(z|y) mixture model.
         """
+        # Compute the standard deviations from the log variances
+        r1_scale = torch.exp(0.5 * r1_log_var)
 
         # Define the mixture distribution
         mixture_distribution = Categorical(logits=r1_weight)
 
         # Define the Gaussian components
         components_distribution = MultivariateNormal(
-            loc=r1_loc,
+            loc=r1_mean,
             scale_tril=torch.diag_embed(r1_scale)  # Convert scale_diag to scale_tril
         )
 
