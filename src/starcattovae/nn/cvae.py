@@ -37,7 +37,7 @@ class CVAE(nn.Module):
 
         # output from q network
         q_zxy_mean, q_zxy_log_var = self.q(x, y)
-        q_zxy_z_samp = self.q.sample_from_gaussian_distribution(self.batch_size, self.latent_dim, q_zxy_mean, q_zxy_log_var)
+        q_zxy_z_samp = self.q.reparameterization(q_zxy_mean, q_zxy_log_var)
 
 
         z = self.reparameterization(mean, torch.exp(0.5 * log_var))  # takes exponential function (log var -> var)
@@ -168,7 +168,8 @@ class Q(nn.Module):
 
         return mean, log_var
     
-    def sample_from_gaussian(self, batch_size, latent_dim, mean, log_var):
-        epsilon = torch.randn((batch_size, latent_dim), dtype=torch.float32)
-        z = mean + torch.exp(0.5 * log_var) * epsilon # why the 0.5?
+    def reparameterization(self, mean, log_var):
+        var = torch.exp(0.5 * log_var)
+        epsilon = torch.randn_like(var).to(self.DEVICE)
+        z = mean + var * epsilon  # reparameterization trick
         return z
