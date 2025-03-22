@@ -9,19 +9,17 @@ from torch.distributions import Categorical, MultivariateNormal, MixtureSameFami
 # h = hidden layer
 
 class CVAE(nn.Module):
-    def __init__(self, batch_size, latent_dim, hidden_dim, param_dim, signal_dim, num_components, DEVICE):
+    def __init__(self, latent_dim, hidden_dim, param_dim, signal_dim, num_components, DEVICE):
         super(CVAE, self).__init__()
         self.latent_dim = latent_dim
         self.hidden_dim = hidden_dim
         self.num_components = num_components
-        self.batch_size = batch_size
 
         self.r1 = Encoder(signal_dim=signal_dim, hidden_dim=hidden_dim, latent_dim=latent_dim, num_components=num_components)
-        self.r2 = Decoder(latent_dim=latent_dim, hidden_dim=hidden_dim, output_dim=input_dim, condition_dim=condition_dim)
-        self.q = Q(batch_size=batch_size, signal_dim=signal_dim, param_dim=param_dim, hidden_dim=hidden_dim, latent_dim=latent_dim)
+        self.r2 = Decoder(latent_dim=latent_dim, hidden_dim=hidden_dim, param_dim=param_dim, signal_dim=signal_dim)
+        self.q = Q(signal_dim=signal_dim, param_dim=param_dim, hidden_dim=hidden_dim, latent_dim=latent_dim)
         # declare mixture gaussian here
-        self.bimix_gauss 
-
+        
         self.DEVICE = DEVICE
     
     # all the new implementation here
@@ -40,11 +38,8 @@ class CVAE(nn.Module):
         q_zxy_z_samp = self.q.reparameterization(q_zxy_mean, q_zxy_log_var)
 
         # r2 network
-        r2_xz = self.r2(q_zxy_z_samp, y)
+        r2_x_hat = self.r2(q_zxy_z_samp, y)
 
-
-        z = self.reparameterization(mean, torch.exp(0.5 * log_var))  # takes exponential function (log var -> var)
-        x_hat = self.decoder(z, condition)
         return x_hat, mean, log_var
 
 # sampling from latent conditioned on signal
@@ -172,7 +167,7 @@ class Encoder(nn.Module):
 # conditioned parameters on signals
 class Q(nn.Module):
     def __init__(self, signal_dim, param_dim, hidden_dim, latent_dim, num_channels=1, kernel_size=3, stride=1, padding=1):
-        super(Encoder, self).__init__()
+        super(Q, self).__init__()
         self.latent_dim = latent_dim
 
         self.conv_layers = nn.Sequential(
