@@ -33,11 +33,14 @@ class CVAE(nn.Module):
     def forward(self, x, y):
         # r1 network
         r1_mean, r1_log_var, r1_weights = self.r1(y)
-        r1_zy_z_samp = self.r1.define_and_sample_gmm(r1_weights, r1_mean, r1_log_var)
+        r1_zy_z_samp = self.r1.define_and_sample_gmm(r1_weights, r1_mean, r1_log_var) # use this to sample from the mixture model, allows for multimodal distributions. Can change later but this is what Gabbard et al. used
 
         # output from q network
         q_zxy_mean, q_zxy_log_var = self.q(x, y)
         q_zxy_z_samp = self.q.reparameterization(q_zxy_mean, q_zxy_log_var)
+
+        # r2 network
+        r2_xz = self.r2(q_zxy_z_samp, y)
 
 
         z = self.reparameterization(mean, torch.exp(0.5 * log_var))  # takes exponential function (log var -> var)
@@ -45,20 +48,54 @@ class CVAE(nn.Module):
         return x_hat, mean, log_var
 
 # sampling from latent conditioned on signal
-# todo fix this
 class Decoder(nn.Module):
-    def __init__(self, latent_dim, hidden_dim, param_dim, signal_dim):
+    def __init__(self, latent_dim, hidden_dim, param_dim, signal_dim, num_channels=1, kernel_size=3, stride=1, padding=1):
         super(Decoder, self).__init__()
-        self.FC_hidden = nn.Linear(latent_dim + signal_dim, hidden_dim)
-        self.FC_hidden2 = nn.Linear(hidden_dim, hidden_dim)
-        self.FC_output = nn.Linear(hidden_dim, param_dim)
-        self.LeakyReLU = nn.LeakyReLU(0.2)
-        
-    def forward(self, z, signal):
-        z = torch.cat([z, signal], dim=1)
-        h = self.LeakyReLU(self.FC_hidden(z))
-        h = self.LeakyReLU(self.FC_hidden2(h))
-        x_hat = self.FC_output(h)
+        self.latent_dim = latent_dim
+        self.signal_dim = signal_dim
+
+        # Fully connected layers to combine z and y
+        self.fc_layers = nn.Sequential(
+            nn.Linear(latent_dim + signal_dim, hidden_dim),
+            nn.LeakyReLU(0.2),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.LeakyReLU(0.2)
+        )
+
+        # Convolutional layers for decoding
+        self.conv_layers = nn.Sequential(
+            nn.ConvTranspose1d(in_channels=hidden_dim, out_channels=hidden_dim, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.LeakyReLU(0.2),
+            nn.ConvTranspose1d(in_channels=hidden_dim, out_channels=hidden_dim, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.LeakyReLU(0.2),
+            nn.ConvTranspose1d(in_channels=hidden_dim, out_channels=num_channels, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.ReLU()  # insure non-negative output, will need to change for other parameters
+        )
+
+    def forward(self, z, y):
+        """
+        Forward pass for the decoder.
+        Args:
+            z: Latent variable (batch_size, latent_dim)
+            y: Signal (batch_size, signal_dim)
+        Returns:
+            x_hat: Reconstructed parameters (batch_size, param_dim)
+        """
+        # Concatenate z and y
+        combined = torch.cat([z, y], dim=1)  # Shape: (batch_size, latent_dim + signal_dim)
+
+        # Pass through fully connected layers
+        h = self.fc_layers(combined)  # Shape: (batch_size, hidden_dim)
+
+        # Reshape for convolutional layers
+        h = h.unsqueeze(2)  # Add a channel dimension for ConvTranspose1d (batch_size, hidden_dim, 1)
+
+        # Pass through convolutional layers
+        x_hat = self.conv_layers(h)  # Shape: (batch_size, num_channels, signal_dim)
+
+        # Reshape the output to match the parameter dimension
+        x_hat = x_hat.squeeze(2)  # Remove the extra dimension (batch_size, param_dim)
+
         return x_hat
     
 # only use signals, no params
