@@ -175,15 +175,19 @@ class Encoder(nn.Module):
         self.FC_weights = nn.Linear(hidden_dim, num_components)  # Mixture weights
 
     def forward(self, y):
-        # Pass through convolutional layers
+        y = y.unsqueeze(1)  # Add a channel dimension (batch_size, 1, signal_dim)
+        print(y.shape)
         h = self.conv_layers(y)
+        print(h.shape)
+        h = h.view(h.shape[0], -1)
         h = self.fc_layers(h)
         # Compute GMM parameters
         means = self.FC_means(h).view(-1, self.num_components, self.latent_dim)
         log_vars = self.FC_log_vars(h).view(-1, self.num_components, self.latent_dim)
         weights = torch.softmax(self.FC_weights(h), dim=1)
-
+        print(means.shape, log_vars.shape, weights.shape)
         return means, log_vars, weights
+
     
     def define_and_sample_gmm(r1_weight, r1_mean, r1_log_var):
         """

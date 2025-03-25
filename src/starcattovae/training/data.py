@@ -138,7 +138,7 @@ class Data(Dataset):
         # normalised_parameters = self.normalise_parameters(parameters)
 
         # return normalised_signal, parameters
-        return torch.tensor(signal, dtype=torch.float32), torch.tensor(parameters, dtype=torch.float32)
+        return torch.tensor(normalised_signal, dtype=torch.float32), torch.tensor(parameters, dtype=torch.float32)
 
     def get_loader(self) -> DataLoader:
         return DataLoader(
