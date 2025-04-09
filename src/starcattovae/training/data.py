@@ -45,6 +45,10 @@ class Data(Dataset):
         self.parameters = self.parameters[keep_idx]
         self.parameters = self.parameters[["beta1_IC_b", "A(km)", "EOS"]]
 
+        # one hot encode A(km)
+        akm = pd.get_dummies(self.parameters["A(km)"], prefix="A")
+        self.parameters = pd.concat([self.parameters.drop(columns=["A(km)"]), akm], axis=1)
+
         # one hot encode EOS
         eos = pd.get_dummies(self.parameters["EOS"], prefix="EOS")
         self.parameters = pd.concat([self.parameters.drop(columns=["EOS"]), eos], axis=1)
