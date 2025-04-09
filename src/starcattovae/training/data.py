@@ -40,15 +40,14 @@ class Data(Dataset):
                 f"Frac of TrainingData being used {init_shape} -> {self.signals.shape}"
             )
 
-        # remove unusual parameters and corresponding signalss
+        # remove unusual parameters and corresponding signals
         keep_idx = self.parameters["beta1_IC_b"] > 0
         self.parameters = self.parameters[keep_idx]
-        self.parameters = self.parameters["beta1_IC_b"]
+        self.parameters = self.parameters[["beta1_IC_b", "A(km)", "EOS"]]
 
-        # equal freq bin the parameters
-        # self.parameters = pd.qcut(self.parameters, 10, labels=False)
-        # one-hot encode the parameters
-        # self.parameters = pd.get_dummies(self.parameters).astype("int32")
+        # one hot encode EOS
+        eos = pd.get_dummies(self.parameters["EOS"], prefix="EOS")
+        self.parameters = pd.concat([self.parameters.drop(columns=["EOS"]), eos], axis=1)
 
         self.signals = self.signals[keep_idx]
         self.signals = self.signals.values.T
@@ -82,7 +81,6 @@ class Data(Dataset):
         self.std = np.std(self.signals, axis=None)
         self.scaling_factor = 5
         self.max_value = abs(self.signals).max()
-        self.max_parameter_value = abs(self.parameters).max()
         self.ylim_signal = (self.signals[:, :].min(), self.signals[:, :].max())
 
     def __str__(self):
@@ -100,8 +98,9 @@ class Data(Dataset):
         str = f"Signal Dataset mean: {self.mean:.3f} +/- {self.std:.3f}\n"
         str += f"Signal Dataset scaling factor (to match noise in generator): {self.scaling_factor}\n"
         str += f"Signal Dataset max value: {self.max_value}\n"
-        str += f"Signal Dataset max parameter value: {self.max_parameter_value}\n"
+        # str += f"Signal Dataset max parameter value: {self.max_parameter_value}\n"
         str += f"Signal Dataset shape: {self.signals.shape}\n"
+        str += f"Parameter Dataset shape: {self.parameters.shape}\n"
         logger.info(str)
 
     def standardize(self, signal):
@@ -132,10 +131,9 @@ class Data(Dataset):
         signal = self.signals[:, idx]
         signal = signal.reshape(1, -1)
         parameters = self.parameters.iloc[idx]
-        parameters = parameters.reshape(1, -1)
+        # parameters = parameters.reshape(1, -1)
 
         normalised_signal = self.normalise_signals(signal)
-        # normalised_parameters = self.normalise_parameters(parameters)
 
         # return normalised_signal, parameters
         return torch.tensor(normalised_signal, dtype=torch.float32), torch.tensor(parameters, dtype=torch.float32)
