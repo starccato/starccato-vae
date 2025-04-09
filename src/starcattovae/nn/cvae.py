@@ -9,11 +9,12 @@ from torch.distributions import Categorical, MultivariateNormal, MixtureSameFami
 # h = hidden layer
 
 class CVAE(nn.Module):
-    def __init__(self, latent_dim, hidden_dim, param_dim, signal_dim, num_components, DEVICE):
+    def __init__(self, latent_dim, hidden_dim, param_dim, signal_dim, num_components, num_epochs, DEVICE):
         super(CVAE, self).__init__()
         self.latent_dim = latent_dim
         self.hidden_dim = hidden_dim
         self.num_components = num_components
+        self.num_epochs = num_epochs
 
         self.r1 = Encoder(signal_dim=signal_dim, hidden_dim=hidden_dim, latent_dim=latent_dim, num_components=num_components)
         self.r2 = Decoder(latent_dim=latent_dim, hidden_dim=hidden_dim, param_dim=param_dim, signal_dim=signal_dim)
@@ -26,7 +27,7 @@ class CVAE(nn.Module):
         z = mean + var * epsilon  # reparameterization trick
         return z
     
-    def forward(self, x, y):
+    def forward(self, x, y, epoch):
         # r1 network
         r1_mean, r1_log_var, r1_weights = self.r1(y)
         r1_zy_z_samp, bimix_gauss = self.r1.define_and_sample_gmm(r1_weights, r1_mean, r1_log_var)
@@ -39,11 +40,18 @@ class CVAE(nn.Module):
         r2_x_mean, r2_x_log_var = self.r2(q_zxy_z_samp, y)
 
         # calculate losses
-        loss, reconstruction_loss_x, KL = self.loss(x, y, r2_x_mean, r2_x_log_var, q_zxy_z_samp, q_zxy_mean, q_zxy_log_var, r1_mean, r1_log_var, r1_weights, bimix_gauss)
+        loss, reconstruction_loss_x, KL = self.loss(x, y, r2_x_mean, r2_x_log_var, q_zxy_z_samp, q_zxy_mean, q_zxy_log_var, r1_mean, r1_log_var, r1_weights, bimix_gauss, epoch)
 
         return r2_x_mean, loss, reconstruction_loss_x, KL
     
-    def loss(self, x, y, r2_x_mean, r2_x_log_var, q_zxy_z_samp, q_zxy_mean, q_zxy_log_var, r1_mean, r1_log_var, r1_weights, bimix_gauss):
+    def annealing(self, epoch):
+        """Anneal the KL divergence term in the loss function"""
+        if epoch < self.num_epochs / 2:
+            return 0.0
+        else:
+            return min(1.0, (epoch - self.num_epochs / 2) / (self.num_epochs / 2))
+    
+    def loss(self, x, y, r2_x_mean, r2_x_log_var, q_zxy_z_samp, q_zxy_mean, q_zxy_log_var, r1_mean, r1_log_var, r1_weights, bimix_gauss, epoch):
         small_constant = 1e-8
         normalising_factor_x = -0.5 * (r2_x_log_var + torch.log(2.0 * torch.pi + small_constant))
         square_diff_between_mu_and_x = (r2_x_mean - x) ** 2
@@ -54,8 +62,10 @@ class CVAE(nn.Module):
         square_diff_between_qz_and_q = (q_zxy_mean - q_zxy_z_samp) ** 2
         inside_exp_q = -0.5 * square_diff_between_qz_and_q / (torch.exp(q_zxy_log_var) + small_constant)
         log_q_q = torch.sum(normalising_factor_kl + inside_exp_q, dim=1, keepdim=True)
-
+        ramp = self.annealing(epoch)
         log_r1_q = bimix_gauss.log_prob(q_zxy_z_samp)
+        log_r1_q = log_r1_q * ramp
+
         KL = torch.mean(log_q_q - log_r1_q)
 
         loss = reconstruction_loss_x + KL
