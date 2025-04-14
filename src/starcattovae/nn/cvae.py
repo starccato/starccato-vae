@@ -64,9 +64,8 @@ class CVAE(nn.Module):
         log_q_q = torch.sum(normalising_factor_kl + inside_exp_q, dim=1, keepdim=True)
         ramp = self.annealing(epoch)
         log_r1_q = bimix_gauss.log_prob(q_zxy_z_samp)
-        log_r1_q = log_r1_q * ramp
-
         KL = torch.mean(log_q_q - log_r1_q)
+        KL = KL * ramp
 
         loss = reconstruction_loss_x + KL
         return loss, reconstruction_loss_x, KL
@@ -124,7 +123,7 @@ class Encoder(nn.Module):
         weights = torch.softmax(self.FC_weights(h), dim=1)
         return means, log_vars, weights
 
-    def define_and_sample_gmm(r1_weight, r1_mean, r1_log_var):
+    def define_and_sample_gmm(self, r1_weight, r1_mean, r1_log_var):
         r1_scale = torch.exp(0.5 * r1_log_var)
         mixture_distribution = Categorical(logits=r1_weight)
         components_distribution = MultivariateNormal(
@@ -142,7 +141,16 @@ class Q(nn.Module):
         self.latent_dim = latent_dim
 
         self.fc_layers = nn.Sequential(
-            nn.Linear(signal_dim + param_dim, hidden_dim),
+            nn.Linear(hidden_dim + param_dim, hidden_dim),
+            nn.LeakyReLU(0.2),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.LeakyReLU(0.2),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.LeakyReLU(0.2)
+        )
+
+        self.y_fc_layers = nn.Sequential(
+            nn.Linear(signal_dim, hidden_dim),
             nn.LeakyReLU(0.2),
             nn.Linear(hidden_dim, hidden_dim),
             nn.LeakyReLU(0.2),
@@ -154,10 +162,16 @@ class Q(nn.Module):
         self.FC_var = nn.Linear(hidden_dim, latent_dim)
 
     def forward(self, x, y):
-        xy = torch.cat([x, y], dim=1)
-        h = self.fc_layers(xy)
-        mean = self.FC_mean(h)
-        log_var = self.FC_var(h)
+        print(x.shape)
+        print(y.shape)
+        hy = self.y_fc_layers(y)
+        print(hy.shape)
+        xhy = torch.cat([x, hy], dim=1)
+        print(xhy.shape)
+        hxy = self.fc_layers(xhy)
+        print(hxy.shape)
+        mean = self.FC_mean(hxy)
+        log_var = self.FC_var(hxy)
         return mean, log_var
 
     def reparameterization(self, mean, log_var):

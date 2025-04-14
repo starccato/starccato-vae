@@ -133,13 +133,15 @@ class Data(Dataset):
 
     def __getitem__(self, idx):
         signal = self.signals[:, idx]
-        signal = signal.reshape(1, -1)
-        parameters = self.parameters.iloc[idx]
-        # parameters = parameters.reshape(1, -1)
+        signal = signal.reshape(1, -1)  # Reshape signal to (1, signal_length)
+
+        parameters = self.parameters.iloc[idx].values  # Extract parameter values as a NumPy array
+        parameters = parameters.astype(np.float32)  # Ensure parameters are float32
+        parameters = parameters.reshape(1, -1)
 
         normalised_signal = self.normalise_signals(signal)
 
-        # return normalised_signal, parameters
+        # Return normalized signal and parameters as PyTorch tensors
         return torch.tensor(normalised_signal, dtype=torch.float32), torch.tensor(parameters, dtype=torch.float32)
 
     def get_loader(self) -> DataLoader:
