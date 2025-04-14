@@ -78,7 +78,16 @@ class Decoder(nn.Module):
         self.signal_dim = signal_dim
 
         self.fc_layers = nn.Sequential(
-            nn.Linear(latent_dim + signal_dim, hidden_dim),
+            nn.Linear(latent_dim + hidden_dim, hidden_dim),
+            nn.LeakyReLU(0.2),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.LeakyReLU(0.2),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.LeakyReLU(0.2)
+        )
+
+        self.y_fc_layers = nn.Sequential(
+            nn.Linear(signal_dim, hidden_dim),
             nn.LeakyReLU(0.2),
             nn.Linear(hidden_dim, hidden_dim),
             nn.LeakyReLU(0.2),
@@ -90,12 +99,12 @@ class Decoder(nn.Module):
         self.fc_log_var = nn.Linear(hidden_dim, param_dim)
 
     def forward(self, z, y):
-        combined = torch.cat([z, y], dim=1)
-        h = self.fc_layers(combined)
-        x_hat = self.fc_loc(h)
-        log_var = self.fc_log_var(h)
+        hy = self.y_fc_layers(y)
+        zhy = torch.cat([z, hy], dim=1)
+        hzy = self.fc_layers(zhy)
+        x_hat = self.fc_loc(hzy)
+        log_var = self.fc_log_var(hzy)
         return x_hat, log_var
-
 
 class Encoder(nn.Module):
     def __init__(self, signal_dim, hidden_dim, latent_dim, num_components):
