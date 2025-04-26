@@ -49,50 +49,48 @@ class CVAE(nn.Module):
     
     def forward(self, x, y, epoch):
         # r1 network
-        r1_mean, r1_log_var = self.r1(y) # checked
-        ramp = compute_ramp(epoch) # checked, unsure whether this is correct still
-        # r1_zy_z_samp, bimix_gauss = self.r1.define_and_sample_gmm(r1_weights, r1_mean, r1_log_var, ramp) # checked. Need to make sure that the bimix is updated correctly. 
-        r1_zy_z_samp = self.r1.reparameterization(r1_mean, r1_log_var) # checked
+        r1_mean, r1_log_var = self.r1(y)
+        r1_z_samp = self.r1.reparameterization(r1_mean, r1_log_var)
 
         # output from q network
-        q_zxy_mean, q_zxy_log_var = self.q(x, y) 
+        q_zxy_mean, q_zxy_log_var = self.q(x, y)
         q_zxy_z_samp = self.q.reparameterization(q_zxy_mean, q_zxy_log_var)
 
         # r2 network
         r2_x_mean, r2_x_log_var = self.r2(q_zxy_z_samp, y)
 
         # calculate losses
-        loss, reconstruction_loss_x, KL = self.loss(x, y, r2_x_mean, r2_x_log_var, q_zxy_z_samp, q_zxy_mean, q_zxy_log_var, r1_mean, r1_log_var, r1_weights, bimix_gauss, epoch)
+        loss, reconstruction_loss_x, KL = self.loss(
+            x, r2_x_mean, r2_x_log_var,
+            q_zxy_z_samp, q_zxy_mean, q_zxy_log_var,
+            r1_mean, r1_log_var, epoch
+        )
 
         return r2_x_mean, loss, reconstruction_loss_x, KL
-
     
     def loss(
-        self, x, y, r2_x_mean, r2_x_log_var,
+        self, x, r2_x_mean, r2_x_log_var,
         q_zxy_z_samp, q_zxy_mean, q_zxy_log_var,
         r1_mean, r1_log_var, epoch
     ):
         small_constant = 1e-8
 
+        # Reconstruction loss
         normalising_factor_x = -0.5 * (
             r2_x_log_var + torch.log(torch.tensor(2.0 * torch.pi + small_constant, device=r2_x_log_var.device, dtype=r2_x_log_var.dtype))
         )
         square_diff_between_mu_and_x = (r2_x_mean - x) ** 2
         inside_exp_x = -0.5 * square_diff_between_mu_and_x / (torch.exp(r2_x_log_var) + small_constant)
         reconstruction_loss_x = torch.sum(normalising_factor_x + inside_exp_x, dim=1)
-        reconstruction_loss_x = torch.mean(reconstruction_loss_x)  # make scalar
+        reconstruction_loss_x = torch.mean(reconstruction_loss_x)  # Make scalar
 
-        normalising_factor_kl = -0.5 * (
-            q_zxy_log_var + torch.log(torch.tensor(2.0 * torch.pi + small_constant, device=q_zxy_log_var.device, dtype=q_zxy_log_var.dtype))
+        # KL divergence
+        kl_divergence = -0.5 * torch.sum(
+            1 + r1_log_var - r1_mean.pow(2) - r1_log_var.exp(), dim=1
         )
-        square_diff_between_qz_and_q = (q_zxy_mean - q_zxy_z_samp) ** 2
-        inside_exp_q = -0.5 * square_diff_between_qz_and_q / (torch.exp(q_zxy_log_var) + small_constant)
-        log_q_q = torch.sum(normalising_factor_kl + inside_exp_q, dim=1)
-        ramp = compute_ramp(epoch)
-        log_r1_q = bimix_gauss.log_prob(q_zxy_z_samp)
-        KL = torch.mean(log_q_q - log_r1_q)  # make scalar
-        KL = KL * ramp
+        KL = torch.mean(kl_divergence)  # Make scalar
 
+        # Total loss
         loss = reconstruction_loss_x + KL
         return loss, reconstruction_loss_x, KL
 
