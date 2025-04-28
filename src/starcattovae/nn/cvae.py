@@ -42,11 +42,6 @@ class CVAE(nn.Module):
 
         self.DEVICE = DEVICE
     
-    # def reparameterization(self, mean, var):
-    #     epsilon = torch.randn_like(var).to(self.DEVICE)  # sampling epsilon        
-    #     z = mean + var * epsilon  # reparameterization trick
-    #     return z
-    
     def forward(self, x, y, epoch):
         # r1 network
         r1_mean, r1_log_var = self.r1(y)
