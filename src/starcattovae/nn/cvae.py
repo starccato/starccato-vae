@@ -33,6 +33,7 @@ class CVAE(nn.Module):
         super(CVAE, self).__init__()
         self.latent_dim = latent_dim
         self.hidden_dim = hidden_dim
+        self.param_dim = param_dim
         self.num_components = num_components
         self.num_epochs = num_epochs
 
@@ -58,7 +59,7 @@ class CVAE(nn.Module):
         loss, reconstruction_loss_x, KL = self.loss(
             x, r2_x_mean, r2_x_log_var,
             q_zxy_mean, q_zxy_log_var,
-            r1_mean, r1_log_var
+            r1_mean, r1_log_var, epoch
         )
 
         return r2_x_mean, loss, reconstruction_loss_x, KL
@@ -80,28 +81,42 @@ class CVAE(nn.Module):
     def loss(
         self, x, r2_x_mean, r2_x_log_var,
         q_zxy_mean, q_zxy_log_var,
-        r1_mean, r1_log_var
-    ): # unsure whether reconstruction loss is correct, I think KL is correct based on the paper
+        r1_mean, r1_log_var,
+        epoch
+    ):
         small_constant = 1e-8
 
-        # Reconstruction loss (ELBO component)
+        # Reconstruction loss (numeric part - Gaussian log-likelihood)
         normalising_factor_x = -0.5 * (
             r2_x_log_var + torch.log(torch.tensor(2.0 * torch.pi + small_constant, device=r2_x_log_var.device, dtype=r2_x_log_var.dtype))
         )
-        square_diff_between_mu_and_x = (r2_x_mean - x) ** 2
+        square_diff_between_mu_and_x = (r2_x_mean[:, 0] - x[:, 0]) ** 2
         inside_exp_x = -0.5 * square_diff_between_mu_and_x / (torch.exp(r2_x_log_var) + small_constant)
-        reconstruction_loss_x = torch.sum(normalising_factor_x + inside_exp_x, dim=1)
-        reconstruction_loss_x = torch.mean(reconstruction_loss_x)  # Make scalar
+        numeric_reconstruction_loss_x = torch.sum(normalising_factor_x + inside_exp_x, dim=1)
+        numeric_reconstruction_loss_x = torch.mean(numeric_reconstruction_loss_x)
+
+        # Reconstruction loss (categorical part - Binary Cross-Entropy)
+        if self.param_dim > 1:
+            reconstruction_loss_one_hot = nn.BCEWithLogitsLoss()(r2_x_mean[:, 1:], x[:, 1:])
+        else:
+            reconstruction_loss_one_hot = 0.0
+
+        alpha = 1.0  # Weight for categorical loss
+        reconstruction_loss_x = numeric_reconstruction_loss_x + alpha * reconstruction_loss_one_hot
 
         # KL divergence between q(z|x, y) and r(z|y)
         kl_divergence = 0.5 * torch.sum(
-            torch.exp(q_zxy_log_var - r1_log_var)  # σ_q^2 / σ_r^2
-            + ((r1_mean - q_zxy_mean) ** 2) / (torch.exp(r1_log_var) + small_constant)  # (μ_r - μ_q)^2 / σ_r^2
+            torch.exp(q_zxy_log_var - r1_log_var)
+            + ((r1_mean - q_zxy_mean) ** 2) / (torch.exp(r1_log_var) + small_constant)
             - 1
-            + r1_log_var - q_zxy_log_var,  # log(σ_r^2 / σ_q^2)
+            + r1_log_var - q_zxy_log_var,
             dim=1
         )
-        KL = torch.mean(kl_divergence)  # Make scalar
+        KL = torch.mean(kl_divergence)
+
+        # Apply KL annealing (optional)
+        ramp = compute_ramp(epoch, ramp_start=1, ramp_end=100)
+        KL = ramp * KL
 
         # Total loss
         loss = -reconstruction_loss_x + KL
