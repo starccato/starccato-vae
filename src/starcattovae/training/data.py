@@ -19,7 +19,7 @@ TIME_CSV = f"../data/training/richers_1764_times.csv"
 
 
 class Data(Dataset):
-    def __init__(self, batch_size=BATCH_SIZE, frac=1, train=True , indices=None):
+    def __init__(self, batch_size=BATCH_SIZE, frac=1, train=True , indices=None, multi_param=False):
         ### read data from csv files
         self.parameters = pd.read_csv(PARAMETERS_CSV)
         self.signals = pd.read_csv(SIGNALS_CSV).astype("float32").T
@@ -43,17 +43,22 @@ class Data(Dataset):
         # remove unusual parameters and corresponding signals
         keep_idx = self.parameters["beta1_IC_b"] > 0
         self.parameters = self.parameters[keep_idx]
-        # parameter_set = ["beta1_IC_b", "A(km)", "EOS"]
-        parameter_set = ["beta1_IC_b"]
+
+        if multi_param:
+            parameter_set = ["beta1_IC_b", "A(km)", "EOS"]
+        else:
+            parameter_set = ["beta1_IC_b"]
+
         self.parameters = self.parameters[parameter_set]
+            
+        if multi_param:
+            # one hot encode A(km)
+            akm = pd.get_dummies(self.parameters["A(km)"], prefix="A")
+            self.parameters = pd.concat([self.parameters.drop(columns=["A(km)"]), akm], axis=1)
 
-        # one hot encode A(km)
-        # akm = pd.get_dummies(self.parameters["A(km)"], prefix="A")
-        # self.parameters = pd.concat([self.parameters.drop(columns=["A(km)"]), akm], axis=1)
-
-        # # one hot encode EOS
-        # eos = pd.get_dummies(self.parameters["EOS"], prefix="EOS")
-        # self.parameters = pd.concat([self.parameters.drop(columns=["EOS"]), eos], axis=1)
+            # one hot encode EOS
+            eos = pd.get_dummies(self.parameters["EOS"], prefix="EOS")
+            self.parameters = pd.concat([self.parameters.drop(columns=["EOS"]), eos], axis=1)
 
         self.signals = self.signals[keep_idx]
         self.signals = self.signals.values.T
@@ -143,7 +148,6 @@ class Data(Dataset):
 
         normalised_signal = self.normalise_signals(signal)
 
-        # Return normalized signal and parameters as PyTorch tensors
         return torch.tensor(normalised_signal, dtype=torch.float32), torch.tensor(parameters, dtype=torch.float32)
 
     def get_loader(self) -> DataLoader:
