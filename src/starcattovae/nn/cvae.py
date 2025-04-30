@@ -76,7 +76,6 @@ class CVAE(nn.Module):
 
         # Stack the list into a single tensor
         return torch.cat(x_samples, dim=0)
-
     
     def loss(
         self, x, r2_x_mean, r2_x_log_var,
@@ -156,10 +155,11 @@ class CVAE(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, latent_dim, hidden_dim, param_dim, signal_dim):
+    def __init__(self, latent_dim, hidden_dim, param_dim, signal_dim, multi_param=False):
         super(Decoder, self).__init__()
         self.latent_dim = latent_dim
         self.signal_dim = signal_dim
+        self.param_dim = param_dim
 
         self.fc_layers = nn.Sequential(
             nn.Linear(latent_dim + hidden_dim, hidden_dim),
@@ -192,6 +192,11 @@ class Decoder(nn.Module):
         hzy = self.fc_layers(zhy)
         x_hat = self.fc_loc(hzy)
         log_var = self.fc_log_var(hzy)
+        
+        # apply identity activation function to beta1_IC_b, sigmoid to A(km) and EOS classes
+        if self.param_dim > 1:
+            x_hat = torch.cat([x_hat[:, :1], torch.sigmoid(x_hat[:, 1:])], dim=1)
+    
         return x_hat, log_var
 
 class Encoder(nn.Module):
