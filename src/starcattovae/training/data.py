@@ -44,13 +44,16 @@ class Data(Dataset):
         keep_idx = self.parameters["beta1_IC_b"] > 0
         self.parameters = self.parameters[keep_idx]
 
+        # parameter_set = ["beta1_IC_b", "A(km)", "EOS"]
+        # parameter_set = ["beta1_IC_b"]
+
         if multi_param:
             parameter_set = ["beta1_IC_b", "A(km)", "EOS"]
-        else:
+        else: 
             parameter_set = ["beta1_IC_b"]
 
         self.parameters = self.parameters[parameter_set]
-            
+
         if multi_param:
             # one hot encode A(km)
             akm = pd.get_dummies(self.parameters["A(km)"], prefix="A")

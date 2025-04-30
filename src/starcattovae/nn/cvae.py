@@ -180,12 +180,10 @@ class Decoder(nn.Module):
         )
 
         self.fc_loc = nn.Sequential(
-            nn.Linear(hidden_dim, param_dim),
-            nn.LeakyReLU(0.2)
+            nn.Linear(hidden_dim, param_dim)        
         )
         self.fc_log_var = nn.Sequential(
-            nn.Linear(hidden_dim, param_dim),
-            nn.LeakyReLU(0.2)
+            nn.Linear(hidden_dim, param_dim)       
         )
 
     def forward(self, z, y):
