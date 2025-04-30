@@ -78,6 +78,7 @@ class CVAE(nn.Module):
         # Stack the list into a single tensor
         return torch.cat(x_samples, dim=0)
     
+    
     def loss(
         self, x, r2_x_mean, r2_x_log_var,
         q_zxy_mean, q_zxy_log_var,
@@ -86,14 +87,14 @@ class CVAE(nn.Module):
     ):
         small_constant = 1e-8
 
-        # Reconstruction loss (numeric part - Gaussian log-likelihood)
+        # Reconstruction loss (ELBO component)
         normalising_factor_x = -0.5 * (
             r2_x_log_var + torch.log(torch.tensor(2.0 * torch.pi + small_constant, device=r2_x_log_var.device, dtype=r2_x_log_var.dtype))
         )
         square_diff_between_mu_and_x = (r2_x_mean[:, 0] - x[:, 0]) ** 2
-        inside_exp_x = -0.5 * square_diff_between_mu_and_x / (torch.exp(r2_x_log_var) + small_constant)
-        numeric_reconstruction_loss_x = torch.sum(normalising_factor_x + inside_exp_x, dim=1)
-        numeric_reconstruction_loss_x = torch.mean(numeric_reconstruction_loss_x)
+        inside_exp_x = -0.5 * square_diff_between_mu_and_x / (torch.exp(r2_x_log_var[:, 0]) + small_constant)
+        reconstruction_loss_x = torch.sum(normalising_factor_x + inside_exp_x, dim=1)
+        numeric_reconstruction_loss_x = torch.mean(reconstruction_loss_x)  # Make scalar
 
         # Reconstruction loss (categorical part - Binary Cross-Entropy)
         if self.param_dim > 1:
