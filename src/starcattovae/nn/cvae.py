@@ -29,12 +29,11 @@ def compute_ramp(idx, ramp_start=1, ramp_end=100):
     return ramp
 
 class CVAE(nn.Module):
-    def __init__(self, latent_dim, hidden_dim, param_dim, signal_dim, num_components, num_epochs, DEVICE):
+    def __init__(self, latent_dim, hidden_dim, param_dim, signal_dim, num_epochs, DEVICE):
         super(CVAE, self).__init__()
         self.latent_dim = latent_dim
         self.hidden_dim = hidden_dim
         self.param_dim = param_dim
-        self.num_components = num_components
         self.num_epochs = num_epochs
 
         self.r1 = Encoder(signal_dim=signal_dim, hidden_dim=hidden_dim, latent_dim=latent_dim)
@@ -89,10 +88,19 @@ class CVAE(nn.Module):
 
         # Reconstruction loss (ELBO component)
         normalising_factor_x = -0.5 * (
-            r2_x_log_var + torch.log(torch.tensor(2.0 * torch.pi + small_constant, device=r2_x_log_var.device, dtype=r2_x_log_var.dtype))
+            r2_x_log_var[:, 0] + torch.log(torch.tensor(2.0 * torch.pi + small_constant, device=r2_x_log_var.device, dtype=r2_x_log_var.dtype))
         )
+
+        # change shape from 32 to [32, 1]
+        # print(normalising_factor_x.shape)
+        normalising_factor_x = normalising_factor_x.view(normalising_factor_x.shape[0], 1)
+
+        # print(normalising_factor_x.shape)
+
         square_diff_between_mu_and_x = (r2_x_mean[:, 0] - x[:, 0]) ** 2
         inside_exp_x = -0.5 * square_diff_between_mu_and_x / (torch.exp(r2_x_log_var[:, 0]) + small_constant)
+
+        # print(inside_exp_x.shape)
         reconstruction_loss_x = torch.sum(normalising_factor_x + inside_exp_x, dim=1)
         numeric_reconstruction_loss_x = torch.mean(reconstruction_loss_x)  # Make scalar
 
@@ -114,6 +122,8 @@ class CVAE(nn.Module):
             dim=1
         )
         KL = torch.mean(kl_divergence)
+        KL_weight = 10
+        KL = KL_weight * KL
 
         # Apply KL annealing (optional)
         ramp = compute_ramp(epoch, ramp_start=1, ramp_end=100)
@@ -243,42 +253,6 @@ class Encoder(nn.Module):
         epsilon = torch.randn_like(var)
         z = mean + var * epsilon
         return z
-
-    # def define_and_sample_gmm(self, r1_weight, r1_mean, r1_log_var, ramp):
-    #     # Ensure numerical stability by clamping log_var
-    #     r1_scale = torch.exp(0.5 * torch.clamp(r1_log_var, min=-10, max=10))  # Clamp log_var to prevent extreme values
-    #     r1_scale = torch.clamp(r1_scale, min=1e-6)  # Ensure that the scale is not too small
-
-    #     # Debugging prints
-    #     print("r1_mean:", r1_mean)
-    #     print("r1_log_var:", r1_log_var)
-    #     print("r1_scale:", r1_scale)
-
-    #     # Apply KL annealing to weight
-    #     r1_weight = torch.clamp(r1_weight, min=SMALL_CONSTANT)  # Ensure weights are positive
-    #     r1_weight = r1_weight * ramp  # Apply ramp to weights
-
-    #     # Debugging prints
-    #     print("r1_weight:", r1_weight)
-
-    #     # Define the mixture distribution
-    #     mixture_distribution = Categorical(logits=r1_weight)  # Categorical distribution over components
-    #     components_distribution = MultivariateNormal(
-    #         loc=r1_mean, 
-    #         scale_tril=torch.diag_embed(r1_scale)  # Diagonal covariance matrix
-    #     )
-
-    #     # Define the Mixture of Gaussians distribution
-    #     bimix_gauss = MixtureSameFamily(mixture_distribution, components_distribution)
-
-    #     # Sample from the distribution
-    #     r1_zy_samp = bimix_gauss.sample()
-
-    #     # Debugging prints
-    #     print("r1_zy_samp:", r1_zy_samp)
-
-    #     return r1_zy_samp, bimix_gauss
-
 
 class Q(nn.Module):
     def __init__(self, signal_dim, param_dim, hidden_dim, latent_dim):
