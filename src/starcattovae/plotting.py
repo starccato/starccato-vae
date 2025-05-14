@@ -379,3 +379,43 @@ def plot_single_signal(
     if fname:
         plt.savefig(fname, dpi=300, bbox_inches="tight")
     plt.show()
+
+def plot_gradients(
+    encoder_gradients: List[float],
+    decoder_gradients: List[float],
+    q_gradients: List[float],
+    fname: str = None
+):
+    """Plot encoder, decoder, and Q network gradient norms on separate subplots in the same figure."""
+    fig, axes = plt.subplots(3, 1, figsize=(10, 18))
+
+    # Plot encoder gradients
+    axes[0].plot(encoder_gradients, label='Encoder Gradients', color='blue')
+    axes[0].set_title('Encoder Gradient Norms During Training')
+    axes[0].set_xlabel('Training Steps')
+    axes[0].set_ylabel('Gradient Norm')
+    axes[0].legend()
+
+    # Plot decoder gradients
+    axes[1].plot(decoder_gradients, label='Decoder Gradients', color='orange')
+    axes[1].set_title('Decoder Gradient Norms During Training')
+    axes[1].set_xlabel('Training Steps')
+    axes[1].set_ylabel('Gradient Norm')
+    axes[1].legend()
+
+    # Plot Q network gradients
+    axes[2].plot(q_gradients, label='Q Gradients', color='green')
+    axes[2].set_title('Q Gradient Norms During Training')
+    axes[2].set_xlabel('Training Steps')
+    axes[2].set_ylabel('Gradient Norm')
+    axes[2].legend()
+
+    # Adjust layout
+    plt.tight_layout()
+
+    # Save the figure if a filename is provided
+    if fname:
+        plt.savefig(fname, dpi=300, bbox_inches="tight")
+
+    plt.show()
+    return fig, axes

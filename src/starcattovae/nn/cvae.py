@@ -110,7 +110,7 @@ class CVAE(nn.Module):
         else:
             reconstruction_loss_one_hot = 0.0
 
-        alpha = 1.0  # Weight for categorical loss
+        alpha = 1.0  # Weight fr categorical loss
         reconstruction_loss_x = numeric_reconstruction_loss_x + alpha * reconstruction_loss_one_hot
 
         # KL divergence between q(z|x, y) and r(z|y)
@@ -122,8 +122,6 @@ class CVAE(nn.Module):
             dim=1
         )
         KL = torch.mean(kl_divergence)
-        KL_weight = 10
-        KL = KL_weight * KL
 
         # Apply KL annealing (optional)
         ramp = compute_ramp(epoch, ramp_start=1, ramp_end=100)
@@ -189,19 +187,25 @@ class Decoder(nn.Module):
 
         self.fc_layers = nn.Sequential(
             nn.Linear(latent_dim + hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),  # Add BatchNorm
             nn.LeakyReLU(0.2),
             nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),  # Add BatchNorm
             nn.LeakyReLU(0.2),
             nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),  # Add BatchNorm
             nn.LeakyReLU(0.2)
         )
 
         self.y_fc_layers = nn.Sequential(
             nn.Linear(signal_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),  # Add BatchNorm
             nn.LeakyReLU(0.2),
             nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),  # Add BatchNorm
             nn.LeakyReLU(0.2),
             nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),  # Add BatchNorm
             nn.LeakyReLU(0.2)
         )
 
@@ -232,10 +236,13 @@ class Encoder(nn.Module):
 
         self.fc_layers = nn.Sequential(
             nn.Linear(signal_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),  # Add BatchNorm
             nn.LeakyReLU(0.2),
             nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),  # Add BatchNorm
             nn.LeakyReLU(0.2),
             nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),  # Add BatchNorm
             nn.LeakyReLU(0.2)
         )
 
@@ -261,19 +268,25 @@ class Q(nn.Module):
 
         self.fc_layers = nn.Sequential(
             nn.Linear(hidden_dim + param_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),  # Add BatchNorm
             nn.LeakyReLU(0.2),
             nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),  # Add BatchNorm
             nn.LeakyReLU(0.2),
             nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),  # Add BatchNorm
             nn.LeakyReLU(0.2)
         )
 
         self.y_fc_layers = nn.Sequential(
             nn.Linear(signal_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),  # Add BatchNorm
             nn.LeakyReLU(0.2),
             nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),  # Add BatchNorm
             nn.LeakyReLU(0.2),
             nn.Linear(hidden_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),  # Add BatchNorm
             nn.LeakyReLU(0.2)
         )
 
