@@ -22,13 +22,16 @@ class VAE(nn.Module):
 class Decoder(nn.Module):
     def __init__(self, latent_dim, hidden_dim, param_dim,output_dim):
         super(Decoder, self).__init__()
-        self.FC_hidden = nn.Linear(latent_dim + param_dim, hidden_dim)
+        self.FC_x_input = nn.Linear(param_dim, latent_dim)
+        self.FC_hidden = nn.Linear(latent_dim * 2, hidden_dim)
         self.FC_hidden2 = nn.Linear(hidden_dim, hidden_dim)
         self.FC_output = nn.Linear(hidden_dim, output_dim)
         self.LeakyReLU = nn.LeakyReLU(0.2)
         
     def forward(self, z, x):
-        h = torch.cat((z, x), dim=1)  # concatenate z and x
+        # change shape of x to match z
+        xh = self.LeakyReLU(self.FC_x_input(x))
+        h = torch.cat((z, xh), dim=1)  # concatenate z and x
         h = self.LeakyReLU(self.FC_hidden(h))
         h = self.LeakyReLU(self.FC_hidden2(h))
         y_hat = self.FC_output(h)
