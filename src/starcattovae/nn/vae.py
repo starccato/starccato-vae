@@ -44,7 +44,6 @@ class Encoder(nn.Module):
         self.LeakyReLU = nn.LeakyReLU(0.2)
         
     def forward(self, y):
-        print(y.shape)
         h_ = self.LeakyReLU(self.FC_input(y))
         h_ = self.LeakyReLU(self.FC_input2(h_))
         mean = self.FC_mean(h_)
