@@ -13,11 +13,11 @@ class VAE(nn.Module):
         z = mean + var * epsilon  # reparameterization trick
         return z
     
-    def forward(self, x):
-        mean, log_var = self.encoder(x)
+    def forward(self, y):
+        mean, log_var = self.encoder(y)
         z = self.reparameterization(mean, torch.exp(0.5 * log_var))  # takes exponential function (log var -> var)
-        x_hat = self.decoder(z)
-        return x_hat, mean, log_var
+        y_hat = self.decoder(z)
+        return y_hat, mean, log_var
 
 class Decoder(nn.Module):
     def __init__(self, latent_dim, hidden_dim, output_dim):
@@ -30,9 +30,8 @@ class Decoder(nn.Module):
     def forward(self, z):
         h = self.LeakyReLU(self.FC_hidden(z))
         h = self.LeakyReLU(self.FC_hidden2(h))
-        x_hat = self.FC_output(h)
-        print(x_hat.shape)
-        return x_hat
+        y_hat = self.FC_output(h)
+        return y_hat
 
 class Encoder(nn.Module):
     def __init__(self, input_dim, hidden_dim, latent_dim):
