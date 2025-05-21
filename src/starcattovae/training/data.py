@@ -52,7 +52,19 @@ class Data(Dataset):
         else: 
             parameter_set = ["beta1_IC_b"]
 
-        self.parameters = self.parameters[parameter_set]
+        # keep only the parameters we want
+        self.parameters = self.parameters[["A(km)"]]
+
+        akm = pd.get_dummies(self.parameters["A(km)"], prefix="A")
+        self.parameters = pd.concat([self.parameters.drop(columns=["A(km)"]), akm], axis=1)
+
+        # Equal frequency binning for beta1_IC_b
+        # if "beta1_IC_b" in parameter_set:
+        #     self.parameters['beta1_IC_b'] = pd.qcut(
+        #         self.parameters['beta1_IC_b'], q=8, labels=False
+        #     )
+        #     beta_bins = pd.get_dummies(self.parameters['beta1_IC_b'], prefix="beta_bin")
+        #     self.parameters = pd.concat([self.parameters.drop(columns=["beta1_IC_b"]), beta_bins], axis=1)
 
         if multi_param:
             # one hot encode A(km)
